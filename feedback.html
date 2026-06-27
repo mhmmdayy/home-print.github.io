@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="ic-transparent.png" type="image/png">
+    <title>Feedback</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+    </style>
+</head>
+<body
+    class="bg-slate-900 font-sans min-h-screen flex flex-col justify-center items-center p-4 relative overflow-hidden">
+    <div class="absolute w-72 h-72 rounded-full bg-cyan-500/10 blur-[80px] -top-12 -left-12 pointer-events-none"></div>
+    <div class="absolute w-80 h-80 rounded-full bg-pink-500/10 blur-[100px] bottom-10 right-0 pointer-events-none">
+    </div>
+    <div
+        class="max-w-md w-full bg-white/[0.06] backdrop-blur-xl rounded-[32px] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] p-6 sm:p-8 relative border border-white/10 animate-fadeIn z-10 text-white">
+        <div class="mb-6 flex items-center border-b border-white/10 pb-4">
+            <a href="index.html"
+                class="text-cyan-400 hover:text-white font-bold text-sm flex items-center gap-1.5 transition duration-200 group">
+                Kembali
+            </a>
+            <h2 class="text-xl font-black text-white mx-auto pr-14 tracking-tight">Kritik & Saran</h2>
+        </div>
+        <div id="notification"
+            class="hidden mb-5 p-3.5 text-xs sm:text-sm rounded-xl border font-semibold tracking-wide shadow-sm"></div>
+        <form id="feedbackForm" class="space-y-5">
+            <div>
+                <label
+                    class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Nama Lengkap
+                </label>
+                <input type="text" id="nama" required
+                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all text-sm font-medium text-white placeholder-slate-600"
+                    placeholder="Masukkan nama lengkap Anda">
+            </div>
+            <div>
+                <label
+                    class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Nomor WhatsApp
+                </label>
+                <input type="tel" id="hp" required
+                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all text-sm font-medium text-white placeholder-slate-600"
+                    placeholder="Contoh: 085754207467">
+            </div>
+            <div>
+                <label
+                    class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                    Pesan & Masukan
+                </label>
+                <textarea id="pesan" required rows="4"
+                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all text-sm font-medium text-white placeholder-slate-600 resize-none"
+                    placeholder="Tulis kritik atau saran Anda di sini..."></textarea>
+            </div>
+            <button type="submit" id="btnKirim"
+                class="w-full bg-gradient-to-r from-cyan-500 via-indigo-500 to-pink-500 hover:brightness-110 text-white font-black py-3.5 px-4 rounded-xl mt-6 shadow-[0_12px_30px_rgba(6,182,212,0.3)] text-center transform active:scale-[0.97] transition-all duration-200 text-sm tracking-wide border border-white/10 flex items-center justify-center">
+                Kirim
+            </button>
+        </form>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+        import { getDatabase, ref, get, set, child } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js";
+        const firebaseConfig = {
+            apiKey: "AIzaSyBO_jWfltM8J9obdA5Vio50kPtOqkDuDlw",
+            authDomain: "home-print-8437d.firebaseapp.com",
+            databaseURL: "https://home-print-8437d-default-rtdb.firebaseio.com",
+            projectId: "home-print-8437d",
+            storageBucket: "home-print-8437d.firebasestorage.app",
+            messagingSenderId: "418956397903",
+            appId: "1:418956397903:web:cb17eaeab729790f23093a",
+            measurementId: "G-ZHRM0PKS2D"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const navigationEntry = performance.getEntriesByType("navigation")[0];
+        if (navigationEntry && navigationEntry.type === "reload") {
+            window.location.href = "index.html";
+        }
+        document.getElementById('feedbackForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const namaInput = document.getElementById('nama').value.trim();
+            const hpInput = document.getElementById('hp').value.trim();
+            const pesanInput = document.getElementById('pesan').value.trim();
+            const notifDiv = document.getElementById('notification');
+            const btnKirim = document.getElementById('btnKirim');
+            notifDiv.className = "hidden";
+            btnKirim.disabled = true;
+            btnKirim.innerText = 'Mengirim masukan...';
+            try {
+                const snapshot = await get(child(ref(db), 'feedback'));
+                let nextIndex = 1;
+                if (snapshot.exists()) {
+                    const dataFeedback = snapshot.val();
+                    const keys = Object.keys(dataFeedback);
+                    keys.forEach(key => {
+                        if (key.startsWith('feedback')) {
+                            const indexNum = parseInt(key.replace('feedback', ''));
+                            if (!isNaN(indexNum) && indexNum >= nextIndex) {
+                                nextIndex = indexNum + 1;
+                            }
+                        }
+                    });
+                }
+                const targetNodeName = 'feedback' + nextIndex;
+                await set(ref(db, 'feedback/' + targetNodeName), {
+                    nama: namaInput,
+                    hp: hpInput,
+                    pesan: pesanInput
+                });
+                notifDiv.innerText = `Terima kasih telah memberikan masukan!`;
+                notifDiv.className = "mb-5 p-3.5 text-xs sm:text-sm rounded-xl border bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-semibold tracking-wide shadow-sm block animate-fadeIn";
+                document.getElementById('feedbackForm').reset();
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1800);
+            } catch (error) {
+                console.error("Firebase Submit Error: ", error);
+                notifDiv.innerText = 'Gagal mengirim masukan: ' + error.message;
+                notifDiv.className = "mb-5 p-3.5 text-xs sm:text-sm rounded-xl border bg-red-500/10 text-red-400 border-red-500/20 font-semibold tracking-wide shadow-sm block animate-fadeIn";
+                btnKirim.disabled = false;
+                btnKirim.innerText = 'Kirim Masukan Anda';
+            }
+        });
+    </script>
+</body>
+</html>
